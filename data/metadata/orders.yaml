@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────────────────────
+# Table: orders
+# ──────────────────────────────────────────────────────────────
+table: orders
+description: "Customer purchase orders with status tracking"
+
+columns:
+  - name: id
+    type: INTEGER
+    description: "Primary key — unique order identifier"
+  - name: customer_id
+    type: INTEGER
+    description: "Foreign key to customers.id"
+  - name: order_date
+    type: DATE
+    description: "Date the order was placed"
+    time_granularity: day
+    time_format: "YYYY-MM-DD"
+  - name: total
+    type: DECIMAL(10,2)
+    description: "Order total amount in USD"
+  - name: status
+    type: VARCHAR(20)
+    description: "Order lifecycle status"
+    enum_values: ["pending", "shipped", "delivered", "cancelled"]
+
+relationships:
+  - from_column: customer_id
+    to_table: customers
+    to_column: id
+    type: foreign_key
+
+business_rules:
+  - term: "revenue"
+    definition: "SUM(orders.total) WHERE orders.status IN ('shipped', 'delivered')"
+  - term: "active order"
+    definition: "An order with status IN ('pending', 'shipped') — not yet completed or cancelled"
+  - term: "cancelled rate"
+    definition: "COUNT of cancelled orders / COUNT of all orders, expressed as a percentage"

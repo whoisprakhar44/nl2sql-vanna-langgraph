@@ -1,0 +1,33 @@
+# ──────────────────────────────────────────────────────────────
+# Table: customers
+# ──────────────────────────────────────────────────────────────
+table: customers
+description: "Registered customers who can place orders"
+
+columns:
+  - name: id
+    type: INTEGER
+    description: "Primary key — unique customer identifier"
+  - name: name
+    type: VARCHAR(100)
+    description: "Full name of the customer"
+  - name: email
+    type: VARCHAR(150)
+    description: "Customer email address (unique)"
+  - name: region
+    type: VARCHAR(50)
+    description: "Geographic region: North, South, East, West"
+    enum_values: ["North", "South", "East", "West"]
+  - name: created_at
+    type: DATE
+    description: "Date the customer account was created"
+    time_granularity: day
+    time_format: "YYYY-MM-DD"
+
+relationships: []
+
+business_rules:
+  - term: "active customer"
+    definition: "A customer who has placed at least one order in the last 90 days"
+  - term: "new customer"
+    definition: "A customer whose created_at is within the last 30 days"

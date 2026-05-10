@@ -1,0 +1,7 @@
+CREATE TABLE customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    region VARCHAR(50) NOT NULL,
+    created_at DATE NOT NULL
+);

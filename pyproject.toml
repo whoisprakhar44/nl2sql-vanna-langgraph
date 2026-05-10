@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nl2sql-retrieval"
+version = "0.1.0"
+description = "Reasoning-first NL-to-SQL system — Step 2 context retrieval layer"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Prakhar"},
+]
+
+dependencies = [
+    # -- Retrieval (Step 2) --------------------------------------------------
+    # Vanna 0.7.x is the last VannaBase-style release (pre-2.0 rewrite).
+    # We use it ONLY for semantic retrieval against ChromaDB, never for SQL gen.
+    "vanna[chromadb,ollama]==0.7.9",
+    "chromadb>=0.4,<1.0",
+
+    # -- Data modelling & config ---------------------------------------------
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "python-dotenv>=1.0",
+
+    # -- Metadata files ------------------------------------------------------
+    "pyyaml>=6.0",
+
+    # -- LangGraph (for future steps 3-5) ------------------------------------
+    # Included now so the env is ready; Step 2 does NOT import these.
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+    "langchain-ollama>=0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

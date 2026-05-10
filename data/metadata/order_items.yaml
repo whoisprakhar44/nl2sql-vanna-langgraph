@@ -1,0 +1,38 @@
+# ──────────────────────────────────────────────────────────────
+# Table: order_items
+# ──────────────────────────────────────────────────────────────
+table: order_items
+description: "Line items within an order, linking orders to products"
+
+columns:
+  - name: id
+    type: INTEGER
+    description: "Primary key"
+  - name: order_id
+    type: INTEGER
+    description: "Foreign key to orders.id"
+  - name: product_id
+    type: INTEGER
+    description: "Foreign key to products.id"
+  - name: quantity
+    type: INTEGER
+    description: "Number of units ordered"
+  - name: unit_price
+    type: DECIMAL(10,2)
+    description: "Price per unit at time of order (may differ from current product price)"
+
+relationships:
+  - from_column: order_id
+    to_table: orders
+    to_column: id
+    type: foreign_key
+  - from_column: product_id
+    to_table: products
+    to_column: id
+    type: foreign_key
+
+business_rules:
+  - term: "line total"
+    definition: "order_items.quantity * order_items.unit_price"
+  - term: "average order value"
+    definition: "SUM(order_items.quantity * order_items.unit_price) / COUNT(DISTINCT order_items.order_id)"

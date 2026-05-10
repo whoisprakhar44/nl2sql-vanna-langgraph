@@ -1,0 +1,31 @@
+# ──────────────────────────────────────────────────────────────
+# Table: products
+# ──────────────────────────────────────────────────────────────
+table: products
+description: "Product catalogue with pricing and categories"
+
+columns:
+  - name: id
+    type: INTEGER
+    description: "Primary key — unique product identifier"
+  - name: name
+    type: VARCHAR(200)
+    description: "Product display name"
+  - name: category
+    type: VARCHAR(50)
+    description: "Product category"
+    enum_values: ["Electronics", "Clothing", "Home", "Books", "Food"]
+  - name: price
+    type: DECIMAL(10,2)
+    description: "Unit price in USD"
+  - name: created_at
+    type: DATE
+    description: "Date the product was added to the catalogue"
+    time_granularity: day
+    time_format: "YYYY-MM-DD"
+
+relationships: []
+
+business_rules:
+  - term: "premium product"
+    definition: "A product with price >= 100.00"
