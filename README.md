@@ -48,22 +48,22 @@ my_agent/
     ├── nodes.py            # LangGraph node functions
     └── tools.py            # Reusable graph tools/helpers
 
-src/
-├── config/settings.py        # Pydantic Settings (env-based config)
-├── models/schema_context.py  # SchemaContext Pydantic model (output contract)
-├── retrieval/
-│   ├── vanna_retriever.py    # Vanna wrapper (retrieval-only, SQL gen blocked)
-│   ├── metadata_store.py     # YAML metadata + keyword search
-│   ├── schema_graph.py       # FK graph + join-path helpers
-│   ├── keyword_extractor.py  # Stop-word filtering + synonym expansion
-│   ├── synonym_mapper.py     # Business synonym normalisation
-│   ├── context_merger.py     # Candidate merge + SchemaContext assembly
-│   ├── retrieval_pipeline.py # Stage-based retrieval pipeline
-│   ├── ranking/
-│   │   └── reranker.py       # Weighted table reranking
-│   └── context_builder.py    # Stable public API → SchemaContext
-└── training/
-    └── ingest.py             # Schema ingestion scripts
+├── core/                     # The Retrieval Subsystem (formerly src/)
+│   ├── config/settings.py        # Pydantic Settings (env-based config)
+│   ├── models/schema_context.py  # SchemaContext Pydantic model (output contract)
+│   ├── retrieval/
+│   │   ├── vanna_retriever.py    # Vanna wrapper (retrieval-only, SQL gen blocked)
+│   │   ├── metadata_store.py     # YAML metadata + keyword search
+│   │   ├── schema_graph.py       # FK graph + join-path helpers
+│   │   ├── keyword_extractor.py  # Stop-word filtering + synonym expansion
+│   │   ├── synonym_mapper.py     # Business synonym normalisation
+│   │   ├── context_merger.py     # Candidate merge + SchemaContext assembly
+│   │   ├── retrieval_pipeline.py # Stage-based retrieval pipeline
+│   │   ├── ranking/
+│   │   │   └── reranker.py       # Weighted table reranking
+│   │   └── context_builder.py    # Stable public API → SchemaContext
+│   └── training/
+│       └── ingest.py             # Schema ingestion scripts
 
 data/
 ├── metadata/                 # YAML metadata per table
