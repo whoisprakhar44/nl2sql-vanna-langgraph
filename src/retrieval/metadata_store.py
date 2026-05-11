@@ -64,6 +64,7 @@ from src.models.schema_context import (
     TableInfo,
     TimeColumnInfo,
 )
+from src.retrieval.schema_graph import SchemaGraph
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +80,13 @@ class MetadataStore:
 
     def __init__(self, settings: Settings | None = None) -> None:
         settings = settings or get_settings()
+        self._settings = settings
         self._metadata_dir: Path = settings.metadata_path
         self._tables: dict[str, dict[str, Any]] = {}
         self._glossary: list[BusinessRule] = []
+        self._business_rules_by_table: dict[str, list[BusinessRule]] = {}
+        self._synonym_groups: dict[str, list[str]] = {}
+        self._schema_graph = SchemaGraph()
         self._load_all()
 
     # ── Loading ───────────────────────────────────────────────────────────
@@ -99,28 +104,48 @@ class MetadataStore:
         for fpath in sorted(yaml_files):
             try:
                 data = yaml.safe_load(fpath.read_text(encoding="utf-8"))
-                if not data or "table" not in data:
-                    logger.warning("Skipping malformed metadata file: %s", fpath.name)
+                if not data:
+                    logger.warning("Skipping empty metadata file: %s", fpath.name)
+                    continue
+
+                if "table" not in data:
+                    if data.get("synonyms"):
+                        self._load_synonym_groups(data["synonyms"])
+                        logger.debug("Loaded synonym metadata from: %s", fpath.name)
+                    else:
+                        logger.warning("Skipping malformed metadata file: %s", fpath.name)
                     continue
 
                 table_name = data["table"].lower()
                 self._tables[table_name] = data
+                self._load_synonym_groups(data.get("synonyms", {}), default_canonical=table_name)
 
                 # Collect business rules into a flat glossary.
+                table_rules: list[BusinessRule] = []
                 for rule in data.get("business_rules", []):
-                    self._glossary.append(
-                        BusinessRule(term=rule["term"], definition=rule["definition"])
+                    business_rule = BusinessRule(
+                        term=rule["term"],
+                        definition=rule["definition"],
                     )
+                    self._glossary.append(business_rule)
+                    table_rules.append(business_rule)
+                    self._load_synonym_groups(
+                        {rule["term"]: rule.get("synonyms", [])}
+                    )
+                self._business_rules_by_table[table_name] = table_rules
 
                 logger.debug("Loaded metadata for table: %s", table_name)
 
             except Exception:
                 logger.exception("Failed to parse metadata file: %s", fpath.name)
 
+        self._schema_graph = SchemaGraph.from_metadata(self._tables)
+
         logger.info(
-            "MetadataStore loaded %d tables, %d glossary terms",
+            "MetadataStore loaded %d tables, %d glossary terms, %d synonym groups",
             len(self._tables),
             len(self._glossary),
+            len(self._synonym_groups),
         )
 
     # ── Keyword search ────────────────────────────────────────────────────
@@ -167,6 +192,13 @@ class MetadataStore:
             )
             for c in data.get("columns", [])
         ]
+
+    def find_table(self, table_name: str) -> TableInfo | None:
+        """Return TableInfo for one known table name."""
+        data = self._tables.get(table_name.lower())
+        if not data:
+            return None
+        return self._to_table_info(data)
 
     def find_relationships(self, table_names: list[str]) -> list[RelationshipInfo]:
         """
@@ -247,40 +279,94 @@ class MetadataStore:
         return [
             rule
             for rule in self._glossary
-            if any(kw in rule.term.lower() for kw in normalised)
+            if any(kw in rule.term.lower() or kw in rule.definition.lower() for kw in normalised)
         ]
+
+    def find_business_rules_for_tables(self, table_names: list[str]) -> list[BusinessRule]:
+        """Return business rules attached to the given tables."""
+        rules: list[BusinessRule] = []
+        for table_name in table_names:
+            rules.extend(self._business_rules_by_table.get(table_name.lower(), []))
+        return rules
 
     def get_all_table_names(self) -> list[str]:
         """Return all table names known to the metadata store."""
         return list(self._tables.keys())
 
+    def get_synonym_groups(self) -> dict[str, list[str]]:
+        """Return configured business synonym groups."""
+        return {term: list(aliases) for term, aliases in self._synonym_groups.items()}
+
+    @property
+    def schema_graph(self) -> SchemaGraph:
+        """Return the schema relationship graph."""
+        return self._schema_graph
+
     # ── Relationship expansion ────────────────────────────────────────────
 
-    def expand_related_tables(self, table_names: list[str]) -> list[str]:
+    def expand_related_tables(
+        self,
+        table_names: list[str],
+        max_hops: int | None = None,
+    ) -> list[str]:
         """
         Given a set of table names, return additional table names that
         are connected via foreign keys.  This is the 'relationship
         expansion' step of hybrid retrieval.
         """
+        hops = self._settings.relationship_expansion_hops if max_hops is None else max_hops
+        expanded = self._schema_graph.expand_related_tables(table_names, max_hops=hops)
         normalised = {t.lower() for t in table_names}
-        expanded: set[str] = set(normalised)
-
-        for table_name, data in self._tables.items():
-            for rel in data.get("relationships", []):
-                to_table = rel.get("to_table", "").lower()
-
-                if table_name in normalised:
-                    expanded.add(to_table)
-                if to_table in normalised:
-                    expanded.add(table_name)
-
-        new_tables = expanded - normalised
+        new_tables = set(expanded) - normalised
         if new_tables:
             logger.debug("Relationship expansion added tables: %s", new_tables)
 
-        return list(expanded)
+        return expanded
 
     # ── Internals ─────────────────────────────────────────────────────────
+
+    def _load_synonym_groups(
+        self,
+        raw: Any,
+        default_canonical: str | None = None,
+    ) -> None:
+        """Load synonym groups from a dict, list, or table-level alias list."""
+        if not raw:
+            return
+
+        if isinstance(raw, dict):
+            for canonical, aliases in raw.items():
+                self._add_synonym_group(str(canonical), aliases)
+            return
+
+        if isinstance(raw, list) and default_canonical:
+            self._add_synonym_group(default_canonical, raw)
+            return
+
+        if isinstance(raw, list):
+            for item in raw:
+                if isinstance(item, dict):
+                    canonical = item.get("canonical") or item.get("term")
+                    aliases = item.get("aliases") or item.get("synonyms") or []
+                    if canonical:
+                        self._add_synonym_group(str(canonical), aliases)
+
+    def _add_synonym_group(self, canonical: str, aliases: Any) -> None:
+        """Add aliases for one canonical business term."""
+        if not canonical:
+            return
+
+        if isinstance(aliases, str):
+            alias_values = [aliases]
+        elif isinstance(aliases, list):
+            alias_values = [str(alias) for alias in aliases]
+        else:
+            alias_values = []
+
+        existing = self._synonym_groups.setdefault(canonical, [])
+        for alias in alias_values:
+            if alias and alias not in existing:
+                existing.append(alias)
 
     @staticmethod
     def _to_table_info(data: dict[str, Any]) -> TableInfo:

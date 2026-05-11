@@ -6,7 +6,18 @@ Reasoning-First NL-to-SQL Agentic System
 Written for: anyone picking up this project for the first time.
 Project path: /Users/prakhar/nl2sql(vanna+langgraph)
 Last updated: 2026-05-10
-Status: Step 2 complete. Steps 3-5 to be built with LangGraph.
+Status: Step 2 hardened for production-grade retrieval. Steps 3-5 to be built with LangGraph.
+
+2026-05-11 retrieval architecture update:
+  - SchemaContextBuilder remains the public API, but delegates to RetrievalPipeline.
+  - RetrievalPipeline now runs explicit stages: semantic retrieval, keyword retrieval,
+    FK graph expansion, weighted reranking, and context assembly.
+  - SQL example retrieval is disabled by default; examples=[] unless explicitly enabled.
+  - SchemaGraph formalises relationship traversal and shortest join path support.
+  - ContextBuilder responsibilities were split into keyword_extractor.py,
+    synonym_mapper.py, context_merger.py, retrieval_pipeline.py, and ranking/reranker.py.
+  - Structured telemetry logs semantic_tables, keyword_tables, expanded_tables,
+    and final_ranked_tables for every retrieval call.
 
 ================================================================================
 PART 1 — WHAT THIS SYSTEM IS (AND ISN'T)

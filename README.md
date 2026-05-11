@@ -15,6 +15,9 @@ User Question
 │  │ (ChromaDB)    │ │ (YAML)      │ │
 │  └──────────────┘ └─────────────┘ │
 │         ↓                ↓         │
+│  RetrievalPipeline                 │
+│  semantic → keyword → FK → rank     │
+│         ↓                          │
 │  SchemaContextBuilder              │
 │         ↓                          │
 │  SchemaContext (JSON)              │
@@ -43,7 +46,14 @@ src/
 ├── retrieval/
 │   ├── vanna_retriever.py    # Vanna wrapper (retrieval-only, SQL gen blocked)
 │   ├── metadata_store.py     # YAML metadata + keyword search
-│   └── context_builder.py    # Orchestrator → SchemaContext
+│   ├── schema_graph.py       # FK graph + join-path helpers
+│   ├── keyword_extractor.py  # Stop-word filtering + synonym expansion
+│   ├── synonym_mapper.py     # Business synonym normalisation
+│   ├── context_merger.py     # Candidate merge + SchemaContext assembly
+│   ├── retrieval_pipeline.py # Stage-based retrieval pipeline
+│   ├── ranking/
+│   │   └── reranker.py       # Weighted table reranking
+│   └── context_builder.py    # Stable public API → SchemaContext
 └── training/
     └── ingest.py             # Schema ingestion scripts
 
@@ -143,7 +153,10 @@ graph.add_node("retrieve_context", retrieve_context)
 | Vanna `generate_sql()` is blocked | Enforces architecture: Vanna = retrieval only |
 | Hybrid retrieval (semantic + keyword) | Embeddings alone miss exact table/column names |
 | FK relationship expansion | Ensures join tables are included in context |
-| Low retrieval limits (5 DDL, 3 docs, 2 SQL) | Minimises noise for downstream reasoning |
+| Schema graph abstraction | Enables shortest join paths and ambiguity checks |
+| Weighted reranking | Controls noisy table leakage before prompt assembly |
+| SQL examples disabled by default | Avoids template copying and nearest-SQL overfitting |
+| Retrieval telemetry | Logs semantic, keyword, expanded, and final ranked tables |
 | Pydantic models for output | Type safety + JSON serialisation + validation |
 | YAML metadata files | Human-readable, version-controllable schema docs |
 
@@ -158,7 +171,13 @@ graph.add_node("retrieve_context", retrieve_context)
 | `METADATA_DIR` | `./data/metadata` | YAML metadata directory |
 | `RETRIEVAL_DDL_LIMIT` | `5` | Max DDL chunks per query |
 | `RETRIEVAL_DOC_LIMIT` | `3` | Max doc chunks per query |
-| `RETRIEVAL_SQL_LIMIT` | `2` | Max SQL examples per query |
+| `RETRIEVAL_INCLUDE_SQL_EXAMPLES` | `false` | Opt-in switch for SQL example retrieval |
+| `RETRIEVAL_SQL_LIMIT` | `0` | Max SQL examples per query when enabled |
+| `RETRIEVAL_TABLE_LIMIT` | `8` | Max reranked tables in context |
+| `RELATIONSHIP_EXPANSION_HOPS` | `1` | FK graph expansion depth |
+| `RETRIEVAL_SCORE_SEMANTIC_WEIGHT` | `0.5` | Reranker semantic signal weight |
+| `RETRIEVAL_SCORE_KEYWORD_WEIGHT` | `0.3` | Reranker keyword signal weight |
+| `RETRIEVAL_SCORE_RELATIONSHIP_WEIGHT` | `0.2` | Reranker relationship signal weight |
 
 ## License
 

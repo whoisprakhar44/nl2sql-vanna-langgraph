@@ -1,0 +1,18 @@
+# Business synonym groups used before keyword retrieval.
+synonyms:
+  revenue:
+    - sales
+    - turnover
+    - income
+    - order total
+  customers:
+    - buyers
+    - clients
+    - users
+  products:
+    - items
+    - catalogue
+    - catalog
+  cancelled:
+    - canceled
+    - voided

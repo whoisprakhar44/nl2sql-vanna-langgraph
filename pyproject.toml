@@ -27,6 +27,7 @@ dependencies = [
 
     # -- Metadata files ------------------------------------------------------
     "pyyaml>=6.0",
+    "networkx>=3.0,<4.0",
 
     # -- LangGraph (for future steps 3-5) ------------------------------------
     # Included now so the env is ready; Step 2 does NOT import these.

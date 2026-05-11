@@ -38,7 +38,14 @@ class Settings(BaseSettings):
     # Kept deliberately low to minimise noise for downstream agents.
     retrieval_ddl_limit: int = 5
     retrieval_doc_limit: int = 3
-    retrieval_sql_limit: int = 2
+    # SQL examples stay opt-in to prevent nearest-query template copying.
+    retrieval_sql_limit: int = 0
+    retrieval_include_sql_examples: bool = False
+    retrieval_table_limit: int = 8
+    relationship_expansion_hops: int = 1
+    retrieval_score_semantic_weight: float = 0.5
+    retrieval_score_keyword_weight: float = 0.3
+    retrieval_score_relationship_weight: float = 0.2
 
     # -- Metadata directory ---------------------------------------------------
     metadata_dir: str = "./data/metadata"

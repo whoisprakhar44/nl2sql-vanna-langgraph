@@ -119,9 +119,13 @@ class VannaRetriever(ChromaDB_VectorStore, Ollama):
         Semantic search over trained question → SQL pairs.
 
         Returns up to `n` example dicts: [{"question": ..., "sql": ...}].
-        Kept deliberately low (default 2) to avoid template-matching.
+        Disabled by default; the pipeline calls this only when explicitly
+        enabled because SQL examples can encourage template-copying.
         """
-        n = n or get_settings().retrieval_sql_limit
+        n = n if n is not None else get_settings().retrieval_sql_limit
+        if n <= 0:
+            logger.debug("SQL example retrieval disabled for: %s", question)
+            return []
         try:
             results = self.get_similar_question_sql(question=question, n_results=n)
         except Exception:

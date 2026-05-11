@@ -10,22 +10,44 @@ For integration tests that exercise VannaRetriever, run:
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
-from src.models.schema_context import (
-    SchemaContext,
-    TableInfo,
-    ColumnInfo,
-    RelationshipInfo,
-    BusinessRule,
-    TimeColumnInfo,
-    FilterInfo,
-    SQLExample,
-)
-from src.retrieval.metadata_store import MetadataStore
-from src.retrieval.context_builder import SchemaContextBuilder
+import pytest
+
 from src.config.settings import Settings
+from src.models.schema_context import (
+    BusinessRule,
+    ColumnInfo,
+    FilterInfo,
+    RelationshipInfo,
+    SchemaContext,
+    SQLExample,
+    TableInfo,
+    TimeColumnInfo,
+)
+from src.retrieval.context_builder import SchemaContextBuilder
+from src.retrieval.keyword_extractor import KeywordExtractor
+from src.retrieval.metadata_store import MetadataStore
+from src.retrieval.ranking import TableCandidate, TableReranker
+from src.retrieval.schema_graph import SchemaGraph
+from src.retrieval.synonym_mapper import SynonymMapper
+
+
+class FakeVannaRetriever:
+    """Test double that behaves like the retrieval-only Vanna wrapper."""
+
+    def __init__(self) -> None:
+        self.sql_called = False
+
+    def retrieve_ddl(self, question: str, n: int | None = None) -> list[str]:
+        return ["CREATE TABLE orders (id INT, customer_id INT, total DECIMAL);"]
+
+    def retrieve_documentation(self, question: str, n: int | None = None) -> list[str]:
+        return []
+
+    def retrieve_sql_examples(self, question: str, n: int | None = None) -> list[dict[str, str]]:
+        self.sql_called = True
+        return [{"question": question, "sql": "SELECT * FROM orders"}]
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
@@ -68,7 +90,13 @@ class TestSchemaContext:
     def test_context_with_data(self) -> None:
         """SchemaContext should hold typed entities."""
         ctx = SchemaContext(
-            tables=[TableInfo(name="orders", ddl="CREATE TABLE orders (id INT);", description="Orders")],
+            tables=[
+                TableInfo(
+                    name="orders",
+                    ddl="CREATE TABLE orders (id INT);",
+                    description="Orders",
+                )
+            ],
             columns=[ColumnInfo(table="orders", name="id", type="INT", description="PK")],
             relationships=[
                 RelationshipInfo(
@@ -186,6 +214,26 @@ class TestMetadataStore:
         tables = metadata_store.find_tables(["purchase"])
         assert any(t.name == "orders" for t in tables)
 
+    def test_schema_graph_expands_relationships(self, metadata_store: MetadataStore) -> None:
+        """SchemaGraph should power FK expansion."""
+        graph = metadata_store.schema_graph
+        assert isinstance(graph, SchemaGraph)
+        assert "customers" in graph.neighbors("orders")
+        assert "order_items" in graph.neighbors("orders")
+
+    def test_schema_graph_shortest_join_path(self, metadata_store: MetadataStore) -> None:
+        """Should expose shortest join paths for future schema linking."""
+        path = metadata_store.schema_graph.shortest_join_path("customers", "products")
+        assert [rel.from_table for rel in path] == ["orders", "order_items", "order_items"]
+        assert [rel.to_table for rel in path] == ["customers", "orders", "products"]
+
+    def test_synonym_groups_loaded(self, metadata_store: MetadataStore) -> None:
+        """Synonym-only metadata files should be loaded without becoming tables."""
+        groups = metadata_store.get_synonym_groups()
+        assert "revenue" in groups
+        assert "sales" in groups["revenue"]
+        assert "synonyms" not in metadata_store.get_all_table_names()
+
 
 # ── SchemaContextBuilder tests (keyword path only) ────────────────────────
 
@@ -206,6 +254,13 @@ class TestContextBuilderKeywords:
         assert "me" not in keywords
         assert "by" not in keywords
 
+    def test_keyword_extractor_expands_synonyms(self, metadata_store: MetadataStore) -> None:
+        """Business synonyms should add canonical lookup terms."""
+        mapper = SynonymMapper(metadata_store.get_synonym_groups())
+        keywords = KeywordExtractor(mapper).extract("Show sales by region")
+        assert "sales" in keywords
+        assert "revenue" in keywords
+
     def test_merge_tables_deduplication(self) -> None:
         """Tables from both sources should be merged without duplicates."""
         ddl_chunks = ["CREATE TABLE orders (id INT, total DECIMAL);"]
@@ -221,7 +276,8 @@ class TestContextBuilderKeywords:
         """Duplicate business rules should be removed."""
         rules = [
             BusinessRule(term="revenue", definition="SUM of totals"),
-            BusinessRule(term="Revenue", definition="sum of totals"),  # Same content, different case.
+            # Same content, different case.
+            BusinessRule(term="Revenue", definition="sum of totals"),
             BusinessRule(term="profit", definition="Revenue minus cost"),
         ]
         unique = SchemaContextBuilder._deduplicate_rules(rules)
@@ -249,3 +305,85 @@ class TestContextBuilderKeywords:
         raw = [None, 42, {"question": "", "sql": ""}, "garbage"]
         examples = SchemaContextBuilder._parse_sql_examples(raw)
         assert len(examples) == 0
+
+
+class TestReranking:
+    """Tests for weighted table reranking."""
+
+    def test_reranker_uses_weighted_signals(self, sample_settings: Settings) -> None:
+        """Semantic, keyword, and relationship scores should combine predictably."""
+        candidates = [
+            TableCandidate(
+                table=TableInfo(name="orders"),
+                semantic_score=1.0,
+                sources={"semantic"},
+            ),
+            TableCandidate(
+                table=TableInfo(name="customers"),
+                keyword_score=1.0,
+                relationship_score=1.0,
+                sources={"keyword", "relationship"},
+            ),
+            TableCandidate(
+                table=TableInfo(name="order_items"),
+                relationship_score=1.0,
+                sources={"relationship"},
+            ),
+        ]
+
+        ranked = TableReranker(sample_settings).rank(candidates)
+        scores = {item.table.name: item.score for item in ranked}
+
+        assert scores["orders"] == pytest.approx(0.5)
+        assert scores["customers"] == pytest.approx(0.5)
+        assert scores["order_items"] == pytest.approx(0.2)
+
+
+class TestRetrievalPipeline:
+    """Tests for the stage-based retrieval pipeline via the public builder."""
+
+    def test_sql_examples_disabled_by_default(
+        self,
+        sample_settings: Settings,
+        metadata_store: MetadataStore,
+    ) -> None:
+        """SQL examples should remain empty unless explicitly enabled."""
+        fake_vanna = FakeVannaRetriever()
+        settings = sample_settings.model_copy(
+            update={"retrieval_include_sql_examples": False, "retrieval_sql_limit": 2}
+        )
+        builder = SchemaContextBuilder(
+            vanna_retriever=fake_vanna,
+            metadata_store=metadata_store,
+            settings=settings,
+        )
+
+        result = builder.retrieve_with_telemetry("Show sales by region")
+
+        assert result.context.examples == []
+        assert fake_vanna.sql_called is False
+        assert "orders" in result.telemetry.semantic_tables
+        assert "customers" in result.context.table_names
+        assert result.telemetry.final_ranked_tables
+
+    def test_sql_examples_can_be_enabled(
+        self,
+        sample_settings: Settings,
+        metadata_store: MetadataStore,
+    ) -> None:
+        """SQL examples remain available as an explicit opt-in path."""
+        fake_vanna = FakeVannaRetriever()
+        settings = sample_settings.model_copy(
+            update={"retrieval_include_sql_examples": True, "retrieval_sql_limit": 1}
+        )
+        builder = SchemaContextBuilder(
+            vanna_retriever=fake_vanna,
+            metadata_store=metadata_store,
+            settings=settings,
+        )
+
+        result = builder.retrieve_with_telemetry("Show revenue")
+
+        assert fake_vanna.sql_called is True
+        assert len(result.context.examples) == 1
+        assert result.telemetry.sql_examples_enabled is True
