@@ -79,7 +79,7 @@ PYYAML
   - YAML is the format for describing each table's schema and business rules
 
 LANGGRAPH (>=0.2)
-  - Google's framework for building stateful, multi-step AI agent pipelines
+  - LangChain's framework for building stateful, multi-step AI agent pipelines
   - Not yet used in the code — installed now for when Steps 3-5 are built
   - Works as a directed graph where each "node" is an agent or function
   - Think of it like a flowchart where each box can call an LLM
