@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from src.config.settings import Settings
-from src.models.schema_context import (
+from my_agent.core.config.settings import Settings
+from my_agent.core.models.schema_context import (
     BusinessRule,
     ColumnInfo,
     FilterInfo,
@@ -25,12 +25,12 @@ from src.models.schema_context import (
     TableInfo,
     TimeColumnInfo,
 )
-from src.retrieval.context_builder import SchemaContextBuilder
-from src.retrieval.keyword_extractor import KeywordExtractor
-from src.retrieval.metadata_store import MetadataStore
-from src.retrieval.ranking import TableCandidate, TableReranker
-from src.retrieval.schema_graph import SchemaGraph
-from src.retrieval.synonym_mapper import SynonymMapper
+from my_agent.core.retrieval.context_builder import SchemaContextBuilder
+from my_agent.core.retrieval.keyword_extractor import KeywordExtractor
+from my_agent.core.retrieval.metadata_store import MetadataStore
+from my_agent.core.retrieval.ranking import TableCandidate, TableReranker
+from my_agent.core.retrieval.schema_graph import SchemaGraph
+from my_agent.core.retrieval.synonym_mapper import SynonymMapper
 
 
 class FakeVannaRetriever:

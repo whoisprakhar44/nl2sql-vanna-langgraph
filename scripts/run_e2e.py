@@ -17,8 +17,8 @@ logging.basicConfig(level=logging.INFO, format="%(name)s | %(levelname)s | %(mes
 
 
 def main() -> None:
-    from src.training import SchemaIngestor
-    from src.retrieval import SchemaContextBuilder
+    from my_agent.core.training import SchemaIngestor
+    from my_agent.core.retrieval import SchemaContextBuilder
 
     print("=" * 60)
     print("STEP 2 — END-TO-END INTEGRATION TEST")

@@ -10,7 +10,7 @@ try:
 except ImportError:  # pragma: no cover - exercised only when dependency is absent.
     nx = None
 
-from src.models.schema_context import RelationshipInfo
+from my_agent.core.models.schema_context import RelationshipInfo
 
 
 class SchemaGraph:

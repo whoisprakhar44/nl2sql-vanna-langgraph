@@ -7,14 +7,14 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from src.config.settings import Settings, get_settings
-from src.models.schema_context import SchemaContext
-from src.retrieval.context_merger import ContextMerger
-from src.retrieval.keyword_extractor import KeywordExtractor
-from src.retrieval.metadata_store import MetadataStore
-from src.retrieval.ranking import TableReranker
-from src.retrieval.synonym_mapper import SynonymMapper
-from src.retrieval.telemetry import RetrievalTelemetry
+from my_agent.core.config.settings import Settings, get_settings
+from my_agent.core.models.schema_context import SchemaContext
+from my_agent.core.retrieval.context_merger import ContextMerger
+from my_agent.core.retrieval.keyword_extractor import KeywordExtractor
+from my_agent.core.retrieval.metadata_store import MetadataStore
+from my_agent.core.retrieval.ranking import TableReranker
+from my_agent.core.retrieval.synonym_mapper import SynonymMapper
+from my_agent.core.retrieval.telemetry import RetrievalTelemetry
 
 logger = logging.getLogger(__name__)
 

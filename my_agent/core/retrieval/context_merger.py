@@ -7,9 +7,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from src.models.schema_context import BusinessRule, SchemaContext, SQLExample, TableInfo
-from src.retrieval.metadata_store import MetadataStore
-from src.retrieval.ranking import RankedTable, TableCandidate
+from my_agent.core.models.schema_context import BusinessRule, SchemaContext, SQLExample, TableInfo
+from my_agent.core.retrieval.metadata_store import MetadataStore
+from my_agent.core.retrieval.ranking import RankedTable, TableCandidate
 
 logger = logging.getLogger(__name__)
 

@@ -55,8 +55,8 @@ from typing import Any
 
 import yaml
 
-from src.config.settings import Settings, get_settings
-from src.models.schema_context import (
+from my_agent.core.config.settings import Settings, get_settings
+from my_agent.core.models.schema_context import (
     BusinessRule,
     ColumnInfo,
     FilterInfo,
@@ -64,7 +64,7 @@ from src.models.schema_context import (
     TableInfo,
     TimeColumnInfo,
 )
-from src.retrieval.schema_graph import SchemaGraph
+from my_agent.core.retrieval.schema_graph import SchemaGraph
 
 logger = logging.getLogger(__name__)
 

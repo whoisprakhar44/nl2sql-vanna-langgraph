@@ -7,7 +7,7 @@ up a new database, and again only when the schema changes.
 
 Usage:
 ──────
-    from src.training.ingest import SchemaIngestor
+    from my_agent.core.training.ingest import SchemaIngestor
 
     ingestor = SchemaIngestor()
 
@@ -41,8 +41,8 @@ from pathlib import Path
 
 import yaml
 
-from src.config.settings import Settings, get_settings
-from src.retrieval.vanna_retriever import VannaRetriever
+from my_agent.core.config.settings import Settings, get_settings
+from my_agent.core.retrieval.vanna_retriever import VannaRetriever
 
 logger = logging.getLogger(__name__)
 

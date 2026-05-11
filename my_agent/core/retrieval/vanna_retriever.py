@@ -33,7 +33,7 @@ from typing import Any
 from vanna.chromadb import ChromaDB_VectorStore
 from vanna.ollama import Ollama
 
-from src.config.settings import Settings, get_settings
+from my_agent.core.config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 

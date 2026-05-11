@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from src.retrieval.synonym_mapper import SynonymMapper
+from my_agent.core.retrieval.synonym_mapper import SynonymMapper
 
 
 class KeywordExtractor:

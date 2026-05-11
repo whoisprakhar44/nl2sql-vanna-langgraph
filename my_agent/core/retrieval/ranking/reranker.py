@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.config.settings import Settings, get_settings
-from src.models.schema_context import TableInfo
+from my_agent.core.config.settings import Settings, get_settings
+from my_agent.core.models.schema_context import TableInfo
 
 
 @dataclass

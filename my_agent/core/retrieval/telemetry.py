@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.retrieval.ranking import RankedTable
+from my_agent.core.retrieval.ranking import RankedTable
 
 
 @dataclass(frozen=True)

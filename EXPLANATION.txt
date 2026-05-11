@@ -19,6 +19,14 @@ Status: Step 2 hardened for production-grade retrieval. Steps 3-5 to be built wi
   - Structured telemetry logs semantic_tables, keyword_tables, expanded_tables,
     and final_ranked_tables for every retrieval call.
 
+2026-05-12 LangGraph node scaffold update:
+  - my_agent/ now contains the LangGraph-facing project layout.
+  - my_agent/agent.py constructs the graph.
+  - my_agent/utils/state.py defines AgentState.
+  - my_agent/utils/nodes.py contains graph node functions.
+  - my_agent/utils/tools.py wraps reusable graph tools and retrieval helpers.
+  - langgraph.json exposes the graph as nl2sql_agent.
+
 ================================================================================
 PART 1 — WHAT THIS SYSTEM IS (AND ISN'T)
 ================================================================================
@@ -71,7 +79,7 @@ PYDANTIC (>=2.0)
 
 PYDANTIC-SETTINGS
   - Extension of Pydantic for reading environment variables / .env files
-  - The Settings class in src/config/settings.py uses this
+  - The Settings class in my_agent/core/config/settings.py uses this
   - Changes to .env are automatically reflected without code changes
 
 PYYAML
@@ -100,7 +108,7 @@ nl2sql(vanna+langgraph)/
 │   Line 5-14: Project name, version, description, Python requirement (>=3.10)
 │   Line 16-36: All dependencies — vanna==0.7.9, chromadb, pydantic, langgraph
 │   Line 38-43: Dev dependencies — pytest, ruff (linter)
-│   Line 45-47: Tells setuptools to find packages inside the src/ folder
+│   Line 45-47: Tells setuptools to find packages inside the my_agent/ folder
 │   Line 49-54: Ruff linter settings (max line length 100, Python 3.10 target)
 │   Line 56-58: Pytest settings (look in tests/, add . to Python path)
 │
@@ -129,10 +137,19 @@ nl2sql(vanna+langgraph)/
 │   Contains: Architecture diagram, quick start, LangGraph integration guide
 │
 │
-├── src/                          ← ALL application source code lives here
-│   ├── __init__.py               ← Makes src/ a Python package (required)
+├── my_agent/                     ← ALL application source code lives here
+│   ├── __init__.py               ← Makes my_agent/ a Python package
+│   ├── agent.py                  ← Code for constructing your LangGraph graph
+│   ├── utils/                    ← Utilities for your graph
+│   │   ├── __init__.py
+│   │   ├── tools.py              ← Tools for your graph
+│   │   ├── nodes.py              ← Node functions for your graph
+│   │   └── state.py              ← State definition for your graph
 │   │
-│   ├── config/
+│   ├── core/                     ← THE RETRIEVAL SUBSYSTEM (formerly src/)
+│   │   ├── __init__.py
+│   │   │
+│   │   ├── config/
 │   │   ├── __init__.py           ← Exports get_settings and Settings
 │   │   └── settings.py           ← THE CONFIGURATION MODULE
 │   │       Line 1-14:  Module docstring explaining purpose
@@ -401,7 +418,7 @@ STEP 5 — Analytics Agent (LangGraph node)
 
 LANGGRAPH WIRING (skeleton for Steps 3-5):
   from langgraph.graph import StateGraph, START, END
-  from src.retrieval import SchemaContextBuilder
+  from my_agent.core.retrieval import SchemaContextBuilder
 
   builder = SchemaContextBuilder()
 
@@ -453,7 +470,7 @@ python -m scripts.create_sample_db
 
 # Re-train ChromaDB (after schema/YAML changes)
 python -c "
-from src.training import SchemaIngestor
+from my_agent.core.training import SchemaIngestor
 i = SchemaIngestor()
 i.ingest_from_sqlite()
 i.ingest_metadata_directory()
@@ -461,15 +478,15 @@ i.ingest_metadata_directory()
 
 # Quick retrieval test in Python REPL
 python -c "
-from src.retrieval import SchemaContextBuilder
+from my_agent.core.retrieval import SchemaContextBuilder
 ctx = SchemaContextBuilder().retrieve('Show revenue by region last month')
 print(ctx.table_names)
 print(ctx.to_prompt_str())
 "
 
 # Lint / format
-ruff check src/ tests/
-ruff format src/ tests/
+ruff check my_agent/ tests/
+ruff format my_agent/ tests/
 
 # Check Ollama models
 curl http://localhost:11434/api/tags

@@ -10,14 +10,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.config.settings import Settings, get_settings
-from src.models.schema_context import BusinessRule, SchemaContext, SQLExample, TableInfo
-from src.retrieval.context_merger import ContextMerger
-from src.retrieval.keyword_extractor import KeywordExtractor
-from src.retrieval.metadata_store import MetadataStore
-from src.retrieval.retrieval_pipeline import RetrievalPipeline, RetrievalPipelineResult
-from src.retrieval.telemetry import RetrievalTelemetry
-from src.retrieval.vanna_retriever import VannaRetriever
+from my_agent.core.config.settings import Settings, get_settings
+from my_agent.core.models.schema_context import BusinessRule, SchemaContext, SQLExample, TableInfo
+from my_agent.core.retrieval.context_merger import ContextMerger
+from my_agent.core.retrieval.keyword_extractor import KeywordExtractor
+from my_agent.core.retrieval.metadata_store import MetadataStore
+from my_agent.core.retrieval.retrieval_pipeline import RetrievalPipeline, RetrievalPipelineResult
+from my_agent.core.retrieval.telemetry import RetrievalTelemetry
+from my_agent.core.retrieval.vanna_retriever import VannaRetriever
 
 
 class SchemaContextBuilder:

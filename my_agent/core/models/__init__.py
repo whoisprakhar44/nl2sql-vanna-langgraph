@@ -1,4 +1,4 @@
-from src.models.schema_context import (
+from my_agent.core.models.schema_context import (
     SchemaContext,
     TableInfo,
     ColumnInfo,

@@ -40,6 +40,14 @@ User Question
 ## Project Structure
 
 ```
+my_agent/
+├── agent.py                # LangGraph construction
+├── __init__.py
+└── utils/
+    ├── state.py            # AgentState shared across nodes
+    ├── nodes.py            # LangGraph node functions
+    └── tools.py            # Reusable graph tools/helpers
+
 src/
 ├── config/settings.py        # Pydantic Settings (env-based config)
 ├── models/schema_context.py  # SchemaContext Pydantic model (output contract)
@@ -63,7 +71,10 @@ data/
 └── sample.db                 # SQLite test database
 
 tests/
-└── test_retrieval.py         # Unit tests (no Ollama required)
+├── test_agent_graph.py       # LangGraph node scaffold tests
+└── test_retrieval.py         # Retrieval unit tests (no Ollama required)
+
+langgraph.json                # LangGraph app configuration
 ```
 
 ## Quick Start
@@ -92,7 +103,7 @@ ollama pull llama3.2
 ### 4. Train the retrieval layer
 
 ```python
-from src.training import SchemaIngestor
+from my_agent.core.training import SchemaIngestor
 
 ingestor = SchemaIngestor()
 
@@ -106,7 +117,7 @@ ingestor.ingest_metadata_directory()
 ### 5. Retrieve context for a question
 
 ```python
-from src.retrieval import SchemaContextBuilder
+from my_agent.core.retrieval import SchemaContextBuilder
 
 builder = SchemaContextBuilder()
 ctx = builder.retrieve("Show me revenue by region vs last month")
@@ -124,26 +135,27 @@ print(ctx.to_prompt_str())
 pytest tests/ -v
 ```
 
-## How This Connects to LangGraph
+## LangGraph App
 
-Step 2 is designed to slot into a LangGraph pipeline as a node or tool:
+The repository exposes a LangGraph app through `langgraph.json`:
 
 ```python
-# Future: LangGraph integration (Step 3+)
-from langgraph.graph import StateGraph
-from src.retrieval import SchemaContextBuilder
+from my_agent.agent import graph
 
-builder = SchemaContextBuilder()
+result = graph.invoke({"question": "Show me revenue by region"})
+print(result["schema_context"])
+```
 
-def retrieve_context(state):
-    """LangGraph node that runs Step 2 retrieval."""
-    question = state["question"]
-    ctx = builder.retrieve(question)
-    return {"schema_context": ctx.model_dump()}
+The current default graph runs the implemented Step 2 retrieval node:
 
-# Add to your graph
-graph = StateGraph(...)
-graph.add_node("retrieve_context", retrieve_context)
+```
+START -> retrieve_context -> END
+```
+
+Future nodes are already scaffolded in `my_agent/utils/nodes.py`:
+
+```
+retrieve_context -> schema_linker -> generate_sql -> execute_sql -> analytics
 ```
 
 ## Design Decisions
